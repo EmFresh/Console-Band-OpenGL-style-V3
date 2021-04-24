@@ -63,7 +63,6 @@ public:
 
 	void init()
 	{
-
 		// TODO: change shader names
 
 
@@ -164,7 +163,7 @@ public:
 
 				for(int a = 0; a < blurPasses; a++)
 				{
-					m_buffer2->enable();
+					m_buffer1->enable();
 					m_blurHorizontal->enable();
 					m_blurHorizontal->sendUniform("uTex", 0);
 					m_blurHorizontal->sendUniform("uPixleSize", 1.0f / Game::getWindowHeight());
@@ -179,7 +178,7 @@ public:
 					m_blurVertical->enable();
 					m_blurVertical->sendUniform("uTex", 0);
 					m_blurVertical->sendUniform("uPixleSize", 1.0f / Game::getWindowWidth());
-					m_buffer2->getColorTexture(0).bindTexture(0);
+					m_buffer1->getColorTexture(0).bindTexture(0);
 					FrameBuffer::drawFullScreenQuad();
 
 					glBindTexture(GL_TEXTURE_2D, GL_NONE);
@@ -188,6 +187,9 @@ public:
 
 				FrameBuffer::disable();//return to base frame buffer 
 			#pragma endregion 
+			#pragma region Bokah
+				//haha psych  
+			#pragma endregion
 
 				postBuff->setViewport(0, 0, 0);
 				postBuff->enable();
@@ -204,6 +206,7 @@ public:
 				m_buffer1->getColorTexture(0).bindTexture(3);
 
 				CoC->sendUniform("uCamPos", Game::getMainCamera()->getLocalPosition());
+				CoC->sendUniform("uCamForw", Game::getMainCamera()->getForward());
 				//CoC->sendUniform("aperture", 1);
 				//	CoC->sendUniform("focalLength", 0);
 				//	CoC->sendUniform("planeInFocus", 0);

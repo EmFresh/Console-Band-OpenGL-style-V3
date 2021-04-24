@@ -33,6 +33,7 @@ void Camera::setType(CAM_TYPE type, ProjectionPeramiters* peram)
 		if(m_projData)
 			delete m_projData;
 		m_projData = new ProjectionPeramiters(*peram);
+		memset(m_projData, 0, sizeof(ProjectionPeramiters));
 	}
 	OrthoPeramiters* peram1 = reclass(OrthoPeramiters*, peram);
 	FrustumPeramiters* peram2 = reclass(FrustumPeramiters*, peram);

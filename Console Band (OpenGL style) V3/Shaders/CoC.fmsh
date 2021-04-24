@@ -10,31 +10,30 @@ uniform sampler2D uBlurScene;
 //uniform vec4 uViewPos;
 
 uniform vec3  uCamPos;
-uniform float aperture = 1;
-uniform float focalLength = 10;
-uniform float planeInFocus =10;
+uniform vec3  uCamForw;
+uniform float uNear=.001;
+uniform float uFar=500;
+
+uniform float aperture = 1;//scalar value for light
+uniform float focalLength = 5;//depth of field size
+uniform float planeInFocus =10;//distance to focus plane
 
 in vec2 texcoord;
-
 out vec4 outColor;
-
-float liniarizeDepth(float d, float n, float f){
-	float z_n=2*d-1;
-	return 2 * n * f / (f + n - z_n * (f - n));
-}
 
 void main()
 {
-    float objectDistance =distance(texture(uFragPos,texcoord).xyz, uCamPos);
+    vec3 camPos = vec3(uCamPos.xy,-uCamPos.z);
 
-    float CoC = abs(aperture * (focalLength * (objectDistance - planeInFocus)) / (objectDistance * (planeInFocus - focalLength)));
+    float z = texture(uFragDepth,texcoord).z;
+    float objectDistance = -uFar * uNear / (z * (uFar - uNear) - uFar);
+
+    float CoC = abs(aperture * (focalLength * (objectDistance -planeInFocus)) / (objectDistance * (planeInFocus - focalLength)));
 
     //for testing
     vec3 colourA = texture(uScene,texcoord).rgb;
     vec3 colourB = texture(uBlurScene,texcoord).rgb;
 
-    outColor.rgb =  colourA*(1-CoC) +  colourB * CoC;
+    outColor.rgb =  mix(colourA,colourB, CoC);
     outColor.a = 1.0;
-
-    outColor.rgb = vec3(objectDistance);
 }
