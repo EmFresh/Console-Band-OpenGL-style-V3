@@ -9,10 +9,10 @@ std::function<void(double)>m_gameLoop;
 Camera* m_mainCamera;
 std::vector<Camera*>m_cameras;
 Shader
-* m_gBufferShader, * m_postProcessShader/*,* m_forwardRender*/;
+* m_gBufferShader/*, * m_postProcessShader,* m_forwardRender*/;
 
 FrameBuffer
-* m_gBuffer, * m_postBuffer;
+* m_gBuff, * m_postBuffer;
 
 
 WindowCreator* m_window;	//must be init in the constructor
@@ -63,8 +63,7 @@ void GameEmGine::init(std::string name, int width, int height, int x, int y, int
 	AudioPlayer::init();
 	InputManager::init();
 
-	tmpRamp = ResourceManager::getTexture2D("textures/Texture Ramp.png");
-
+	
 
 
 	//LUTpath = "Texture/IWLTBAP_Aspen_-_Standard.cube";
@@ -107,22 +106,22 @@ void GameEmGine::createNewWindow(std::string name, int width, int height, int x,
 
 
 
-	shaderInit();
+	initShader();
 
 	printf("created the window\n");
 
-	m_gBuffer = new FrameBuffer(6, "Main Buffer");
+	m_gBuff = new FrameBuffer(6, "Main Buffer");
 	m_postBuffer = new FrameBuffer(1, "Post Process Buffer");
 
 
-	m_gBuffer->initDepthTexture(getWindowWidth(), getWindowHeight());
-	m_gBuffer->initColourTexture(0, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
-	m_gBuffer->initColourTexture(1, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
-	m_gBuffer->initColourTexture(2, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
-	m_gBuffer->initColourTexture(3, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
-	m_gBuffer->initColourTexture(4, getWindowWidth(), getWindowHeight(), GL_RGB8, GL_NEAREST, GL_CLAMP_TO_EDGE);
-	m_gBuffer->initColourTexture(5, getWindowWidth(), getWindowHeight(), GL_RGB8, GL_NEAREST, GL_CLAMP_TO_EDGE);
-	if(!m_gBuffer->checkFBO())
+	m_gBuff->initDepthTexture(getWindowWidth(), getWindowHeight());
+	m_gBuff->initColourTexture(0, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
+	m_gBuff->initColourTexture(1, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
+	m_gBuff->initColourTexture(2, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
+	m_gBuff->initColourTexture(3, getWindowWidth(), getWindowHeight(), GL_RGB16F, GL_NEAREST, GL_CLAMP_TO_EDGE);
+	m_gBuff->initColourTexture(4, getWindowWidth(), getWindowHeight(), GL_RGB8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+	m_gBuff->initColourTexture(5, getWindowWidth(), getWindowHeight(), GL_RGB8, GL_NEAREST, GL_CLAMP_TO_EDGE);
+	if(!m_gBuff->checkFBO())
 	{
 		puts("FBO failed Creation");
 		system("pause");
@@ -255,11 +254,11 @@ WindowCreator* GameEmGine::getWindow()
 	return m_window;
 }
 
-void GameEmGine::shaderInit()
+void GameEmGine::initShader()
 {
 	m_gBufferShader = ResourceManager::getShader("Shaders/DeferredRender.vtsh", "Shaders/DeferredRender.fmsh");
 
-	m_postProcessShader = ResourceManager::getShader("Shaders/Main Buffer.vtsh", "Shaders/PassThrough.frag");
+	//m_postProcessShader = ResourceManager::getShader("Shaders/Main Buffer.vtsh", "Shaders/PassThrough.frag");
 	//m_forwardRender = ResourceManager::getShader("Shaders/DeferredRender.vtsh", "Shaders/ForwardRender.fmsh");
 
 	Shader::enableUniformErrors(false);
@@ -313,7 +312,7 @@ void GameEmGine::setScene(Scene* scene)
 	m_models.clear();
 	m_frameBuffers.clear();
 	LightManager::clear();
-	m_frameBuffers[m_gBuffer->getTag()] = m_gBuffer;
+	m_frameBuffers[m_gBuff->getTag()] = m_gBuff;
 	scene->setParent(m_mainScene);//set the parent to the previous scene
 	m_mainScene = scene;
 	scene->init();
@@ -458,7 +457,7 @@ void GameEmGine::update()
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 	glClearColor(0, 0, 0, 1);
-	m_gBuffer->clear();//buffer must be black
+	m_gBuff->clear();//buffer must be black
 	//glClearColor((float)m_colour.r / 255, (float)m_colour.g / 255, (float)m_colour.b / 255, (float)m_colour.a / 255);//BG colour
 
 	glClearColor((float)m_colour.r / 255, (float)m_colour.g / 255, (float)m_colour.b / 255, (float)m_colour.a / 255);//BG colour
@@ -478,76 +477,57 @@ void GameEmGine::update()
 
 
 	LightManager::setCamera(m_mainCamera);
+	LightManager::setGBuffer(m_gBuff);
 	((SkyBox*)&m_mainScene->getSkyBox())->setCamera(m_mainCamera);
 
 
 	glViewport(0, 0, getWindowWidth(), getWindowHeight());
 
 	//Opaque renders 
-	m_gBuffer->enable();
+	m_gBuff->enable();
 	m_mainCamera->render(m_gBufferShader, m_models, false);
-	m_gBuffer->disable();
+	m_gBuff->disable();
 
 	//send depth info before rendering transparent objects
-	m_gBuffer->copyDepthToBuffer(getWindowWidth(), getWindowHeight(), m_postBuffer->getFrameBufferID());
+	m_gBuff->copyDepthToBuffer(getWindowWidth(), getWindowHeight(), m_postBuffer->getFrameBufferID());
 
 	//sky box
-	m_gBuffer->enable();
+	m_gBuff->enable();
 	if(m_mainScene->skyBoxEnabled)
 		(*(SkyBox*)&m_mainScene->getSkyBox()).render();
-	m_gBuffer->disable();
+	m_gBuff->disable();
 
 	//transparent renders
-	m_gBuffer->enable();
+	m_gBuff->enable();
 	m_mainCamera->render(m_gBufferShader, m_models, true);
-	m_gBuffer->disable();
+	m_gBuff->disable();
 
 #pragma region Light Accumulation
 
 	m_postBuffer->enable();
-	m_postProcessShader->enable();
-
-	//bind textures
-	Texture2D::bindTexture(0, m_gBuffer->getColorHandle(0));
-	Texture2D::bindTexture(1, m_gBuffer->getColorHandle(1));
-	Texture2D::bindTexture(2, m_gBuffer->getColorHandle(2));
-	Texture2D::bindTexture(3, m_gBuffer->getColorHandle(3));
-	Texture2D::bindTexture(4, m_gBuffer->getColorHandle(4));
-	tmpRamp.bindTexture(5);
-
-
-	m_postProcessShader->sendUniform("uPosOP", 0);
-	m_postProcessShader->sendUniform("uPosTrans", 1);
-	m_postProcessShader->sendUniform("uNormOP", 2);
-	m_postProcessShader->sendUniform("uNormTrans", 3);
-	m_postProcessShader->sendUniform("uScene", 4);
-	m_postProcessShader->sendUniform("uRamp", 5);
+	//m_postProcessShader->enable();
 
 	glDisable(GL_DEPTH_TEST);
 
-
 	//Apply lighting
-	LightManager::setShader(m_postProcessShader);
+	//LightManager::setShader(m_postProcessShader);
 	LightManager::setFramebuffer(m_postBuffer);
 	LightManager::update();
 
 
 	glEnable(GL_DEPTH_TEST);
 
-	//un-bind textures
-	for(int a = 0; a < 5; ++a)
-		Texture2D::bindTexture(a, GL_NONE);
+	
 
-
-	m_postProcessShader->disable();
+	//m_postProcessShader->disable();
 	m_postBuffer->disable();
 
-	m_postBuffer->copySingleColourToBuffer(m_gBuffer->getColourWidth(0), m_gBuffer->getColourHeight(0), m_gBuffer, 0, 5);
+	m_postBuffer->copySingleColourToBuffer(m_gBuff->getColourWidth(0), m_gBuff->getColourHeight(0), m_gBuff, 0, 5);
 
 #pragma endregion
 
 
-	static Shader* composite = ResourceManager::getShader("Shaders/Main Buffer.vtsh", "Shaders/BloomComposite.fmsh");
+	static Shader* composite = ResourceManager::getShader("Shaders/Passthrough.vtsh", "Shaders/BloomComposite.fmsh");
 
 	//store data for later post process
 	m_postBuffer->enable();
@@ -556,8 +536,8 @@ void GameEmGine::update()
 	composite->sendUniform("uScene", 0);
 	composite->sendUniform("uBloom", 1);
 
-	m_gBuffer->getColorTexture(4).bindTexture(0);
-	m_gBuffer->getColorTexture(5).bindTexture(1);
+	m_gBuff->getColorTexture(4).bindTexture(0);
+	m_gBuff->getColorTexture(5).bindTexture(1);
 
 	FrameBuffer::drawFullScreenQuad();
 
@@ -568,11 +548,11 @@ void GameEmGine::update()
 	m_postBuffer->disable();
 		
 	//Apply shadows
-	LightManager::shadowRender(1024, 1024, m_postBuffer, m_gBuffer, m_models);
+	LightManager::shadowRender(1024, 1024, m_postBuffer, m_gBuff, m_models);
 
 	//post effects
 	if(m_customRender)
-		m_customRender(m_gBuffer, m_postBuffer, (float)glfwGetTime());
+		m_customRender(m_gBuff, m_postBuffer, (float)glfwGetTime());
 
 	m_postBuffer->copyColourToBackBuffer(getWindowWidth(), getWindowHeight());
 	m_postBuffer->copyDepthToBackBuffer(getWindowWidth(), getWindowHeight());
@@ -601,13 +581,13 @@ void GameEmGine::changeViewport(GLFWwindow*, int w, int h)
 //	}
 
 	//Framebuffer Resizing 
-	m_gBuffer->resizeDepth(w, h);
-	m_gBuffer->resizeColour(0, w, h);
-	m_gBuffer->resizeColour(1, w, h);
-	m_gBuffer->resizeColour(2, w, h);
-	m_gBuffer->resizeColour(3, w, h);
-	m_gBuffer->resizeColour(4, w, h);
-	m_gBuffer->resizeColour(5, w, h);
+	m_gBuff->resizeDepth(w, h);
+	m_gBuff->resizeColour(0, w, h);
+	m_gBuff->resizeColour(1, w, h);
+	m_gBuff->resizeColour(2, w, h);
+	m_gBuff->resizeColour(3, w, h);
+	m_gBuff->resizeColour(4, w, h);
+	m_gBuff->resizeColour(5, w, h);
 
 	m_postBuffer->resizeDepth(w, h);
 	m_postBuffer->resizeColour(0, w, h);

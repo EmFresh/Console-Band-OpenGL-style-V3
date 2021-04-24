@@ -86,6 +86,7 @@ public:
 
 	static void setShader(Shader* shad);
 
+	static void setGBuffer(FrameBuffer* gBuff);
 
 	static void setFramebuffer(FrameBuffer* buff);
 

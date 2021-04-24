@@ -135,7 +135,7 @@ public:
 	static Texture3D tmpLUT;
 
 private:
-	static void shaderInit();
+	static void initShader();
 	static void calculateFPS();
 	static void fpsLimiter();
 

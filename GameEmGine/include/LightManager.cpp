@@ -6,6 +6,7 @@
 #pragma region Static Variables
 std::vector<Light*> m_lights;
 FrameBuffer* m_framebuffer;
+FrameBuffer* m_gBuffLit;
 FrameBuffer* m_shadows;
 
 Shader* m_shader;
@@ -51,6 +52,10 @@ void LightManager::setCamera(Camera* cam)
 void LightManager::setShader(Shader* shad)
 {
 	m_shader = shad;
+}
+void LightManager::setGBuffer(FrameBuffer* buff)
+{
+	m_gBuffLit = buff;
 }
 
 void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const FrameBuffer* gBuff, const std::unordered_map<void*, Model*>& models)
@@ -149,7 +154,7 @@ void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const F
 			to->enable();
 			glClear(GL_DEPTH_BUFFER_BIT);
 
-			Shader* m_shadowCompShader = ResourceManager::getShader("shaders/Main Buffer.vtsh", "shaders/Shadow Composite.fmsh");
+			Shader* m_shadowCompShader = ResourceManager::getShader("shaders/Passthrough.vtsh", "shaders/Shadow Composite.fmsh");
 
 			m_shadowCompShader->enable();
 			m_shadowCompShader->sendUniform("uScene", 0);
@@ -192,13 +197,47 @@ FrameBuffer* LightManager::getShadowBuffer()
 
 void LightManager::update()
 {
+Texture2D& tmpRamp = ResourceManager::getTexture2D("textures/Texture Ramp.png");
 
 	if(m_framebuffer)
 		m_framebuffer->enable();
-	m_shader->enable();
+
+
+	//bind textures
+	Texture2D::bindTexture(0, m_gBuffLit->getColorHandle(0));
+	Texture2D::bindTexture(1, m_gBuffLit->getColorHandle(1));
+	Texture2D::bindTexture(2, m_gBuffLit->getColorHandle(2));
+	Texture2D::bindTexture(3, m_gBuffLit->getColorHandle(3));
+	Texture2D::bindTexture(4, m_gBuffLit->getColorHandle(4));
+	tmpRamp.bindTexture(5);
 
 	for(unsigned a = 0; a < m_lights.size(); a++)
 	{
+		switch(m_lights[a]->type)
+		{
+		case  Light::NONE:
+			continue;
+			break;
+		case  Light::POINT:
+			m_shader = ResourceManager::getShader("Shaders/PassThrough.vtsh", "Shaders/PointLight.frag");
+			break;
+		case  Light::DIRECTIONAL:
+			m_shader = ResourceManager::getShader("Shaders/PassThrough.vtsh", "Shaders/DirectionalLight.frag");
+			break;
+		case  Light::SPOTLIGHT:
+			m_shader = ResourceManager::getShader("Shaders/PassThrough.vtsh", "Shaders/SpotLight.frag");
+			break;
+		}
+	m_shader->enable();
+
+
+		m_shader->sendUniform("uPosOP", 0);
+		m_shader->sendUniform("uPosTrans", 1);
+		m_shader->sendUniform("uNormOP", 2);
+		m_shader->sendUniform("uNormTrans", 3);
+		m_shader->sendUniform("uScene", 4);
+		m_shader->sendUniform("uRamp", 5);
+
 
 		if(!m_lights[a]->lightEnable)
 		{
@@ -262,9 +301,13 @@ void LightManager::update()
 
 
 		FrameBuffer::drawFullScreenQuad();
+	m_shader->sendUniform("LightEnable", false);
 	}
 
-	m_shader->sendUniform("LightEnable", false);
+
+	//un-bind textures
+	for(int a = 0; a < 5; ++a)
+		Texture2D::unbindTexture(a);
 
 	m_shader->disable();
 	if(m_framebuffer)
