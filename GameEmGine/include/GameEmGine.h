@@ -108,7 +108,7 @@ public:
 
 	static void addCamera(Camera* camera);
 	
-	static void enableBloom(bool bloom);
+	static std::unordered_map<void*, Model*>& getObjectList();
 
 	static void setFPSLimit(short limit);
 	static short getFPSLimit();

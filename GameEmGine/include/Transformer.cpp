@@ -136,20 +136,20 @@ void Transformer::scaleBy(float scale)
 
 void Transformer::scaleBy(float x, float y, float z)
 {
-	Transformer::setScale(m_scaleDat * Vec3(x, y, z));
+	Transformer::scale(m_scaleDat * Vec3(x, y, z));
 }
 
-void Transformer::setScale(float scale)
+void Transformer::scale(float s)
 {
-	Transformer::setScale(scale, scale, scale);
+	Transformer::scale(s, s, s);
 }
 
-void Transformer::setScale(Vec3 scale)
+void Transformer::scale(Vec3 s)
 {
-	Transformer::setScale(scale.x, scale.y, scale.z);
+	Transformer::scale(s.x, s.y, s.z);
 }
 
-void Transformer::setScale(float x, float y, float z)
+void Transformer::scale(float x, float y, float z)
 {
 	m_updatedScale = true;
 

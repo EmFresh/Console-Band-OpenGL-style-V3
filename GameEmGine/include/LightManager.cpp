@@ -11,6 +11,7 @@ FrameBuffer* m_shadows;
 
 Shader* m_shader;
 Camera* m_cam;
+bool m_shadowEnable = true;
 //LightInfo LightSource::m_info;
 //unsigned LightSource::m_size;
 #pragma endregion
@@ -60,12 +61,20 @@ void LightManager::setGBuffer(FrameBuffer* buff)
 
 void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const FrameBuffer* gBuff, const std::unordered_map<void*, Model*>& models)
 {
-	static Camera cam(Camera::ORTHOGRAPHIC, {(float)80,(float)80,80});
+	if(!m_shadowEnable)return;
+
+	Camera cam(Camera::ORTHOGRAPHIC, {(float)w,(float)h,(float)w});
 	static glm::mat4 lsm(1);
 
 
 
 	glViewport(0, 0, w, h);
+	if(m_shadows)
+	{
+		m_shadows->resizeColour(w, h,0);
+		m_shadows->resizeDepth(w, h);
+	}
+	
 	for(uint a = 0; a < m_lights.size(); ++a)
 	{
 		if(!m_lights[a]->shadowEnable)continue;
@@ -79,7 +88,8 @@ void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const F
 			//initialize shadow buffer
 			if(!m_shadows)
 			{
-				m_shadows = new FrameBuffer(0, "shadow buffer");
+				m_shadows = new FrameBuffer(1, "shadow buffer");
+				m_shadows->initColourTexture(w, h, GL_RGB8, GL_NEAREST, GL_CLAMP_TO_EDGE);
 				m_shadows->initDepthTexture(w, h);
 				if(!m_shadows->checkFBO())
 				{
@@ -90,7 +100,6 @@ void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const F
 			}
 
 			Shader* shad = ResourceManager::getShader("Shaders/ShadowDepth.vtsh", "Shaders/ShadowDepth.fmsh");
-			m_shadows->resizeDepth(w, h);
 			m_shadows->clear();
 
 			glm::vec4 dir(0, 0, 1, 1);
@@ -101,7 +110,7 @@ void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const F
 							  glm::lookAt(
 							  glm::vec3(dir = m_lights[a]->getWorldRotationMatrix() *
 							  (m_lights[a]->getLocalRotationMatrix() * dir)) *
-							  glm::vec3{40,40,40},
+							  glm::vec3{w * .5f,h * .5f,w * .5f},
 							  glm::vec3(),
 							  glm::vec3(0, 1, 0)));
 			shad->disable();
@@ -146,11 +155,45 @@ void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const F
 			//glCullFace(GL_BACK);
 			//	glEnable(GL_CULL_FACE);
 
+		//#pragma region Scene Blur  
+		//
+		//	m_shadows->setViewport(0, 0, 0);
+		////	m_shadows->copyDepthToBuffer(m_shadows->getColourWidth(0), m_shadows->getColourHeight(0), m_shadows->getDepthHandle());
+		//
+		//	Shader* blurHorizontal = ResourceManager::getShader("Shaders/Passthrough.vtsh", "Shaders/BlurHorizontal.fmsh");
+		//	Shader* blurVertical = ResourceManager::getShader("Shaders/Passthrough.vtsh", "Shaders/BlurVertical.fmsh");
+		//
+		//	for(int b = 0; b < 3; b++)
+		//	{
+		//		m_shadows->enable();
+		//		blurHorizontal->enable();
+		//		blurHorizontal->sendUniform("uTex", 0);
+		//		blurHorizontal->sendUniform("uPixleSize", 1.0f / m_shadows->getColourWidth(0));
+		//		m_shadows->getColorTexture(0).bindTexture(0);
+		//		FrameBuffer::drawFullScreenQuad();
+		//
+		//		glBindTexture(GL_TEXTURE_2D, GL_NONE);
+		//		blurHorizontal->disable();
+		//
+		//
+		//		m_shadows->enable();
+		//		blurVertical->enable();
+		//		blurVertical->sendUniform("uTex", 0);
+		//		blurVertical->sendUniform("uPixleSize", 1.0f / m_shadows->getColourHeight(0));
+		//		m_shadows->getColorTexture(0).bindTexture(0);
+		//		FrameBuffer::drawFullScreenQuad();
+		//
+		//		glBindTexture(GL_TEXTURE_2D, GL_NONE);
+		//		blurVertical->disable();
+		//	}
+		//
+		//	FrameBuffer::disable();//return to base frame buffer 
+		//#pragma endregion 
 
-				//render shadow 
-			glViewport(0, 0, WindowCreator::getScreenWidth(), WindowCreator::getScreenHeight());
-
+			//render shadow 
+			to->setViewport(0, 0, 0);
 			to->copyDepthToBackBuffer(to->getDepthWidth(), to->getDepthHeight());
+
 			to->enable();
 			glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -165,14 +208,10 @@ void LightManager::shadowRender(unsigned w, unsigned h, FrameBuffer* to, const F
 			m_shadowCompShader->sendUniform("uLightViewProj", lsm);
 			m_shadowCompShader->sendUniform("uShadowEnable", true);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, to->getColorHandle(0));
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, gBuff->getColorHandle(0));
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, gBuff->getColorHandle(2));
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, m_shadows->getDepthHandle());
+			to->getColorTexture(0).bindTexture(0);
+			gBuff->getColorTexture(0).bindTexture(1);
+			gBuff->getColorTexture(2).bindTexture(2);
+			Texture2D::bindTexture(3, m_shadows->getDepthHandle());
 
 			FrameBuffer::drawFullScreenQuad();
 
@@ -197,18 +236,18 @@ FrameBuffer* LightManager::getShadowBuffer()
 
 void LightManager::update()
 {
-Texture2D& tmpRamp = ResourceManager::getTexture2D("textures/Texture Ramp.png");
+	Texture2D& tmpRamp = ResourceManager::getTexture2D("textures/Texture Ramp.png");
 
 	if(m_framebuffer)
 		m_framebuffer->enable();
 
 
 	//bind textures
-	Texture2D::bindTexture(0, m_gBuffLit->getColorHandle(0));
-	Texture2D::bindTexture(1, m_gBuffLit->getColorHandle(1));
-	Texture2D::bindTexture(2, m_gBuffLit->getColorHandle(2));
-	Texture2D::bindTexture(3, m_gBuffLit->getColorHandle(3));
-	Texture2D::bindTexture(4, m_gBuffLit->getColorHandle(4));
+	Texture2D::bindTexture(0, m_gBuffLit->getColourHandle(0));
+	Texture2D::bindTexture(1, m_gBuffLit->getColourHandle(1));
+	Texture2D::bindTexture(2, m_gBuffLit->getColourHandle(2));
+	Texture2D::bindTexture(3, m_gBuffLit->getColourHandle(3));
+	Texture2D::bindTexture(4, m_gBuffLit->getColourHandle(4));
 	tmpRamp.bindTexture(5);
 
 	for(unsigned a = 0; a < m_lights.size(); a++)
@@ -228,7 +267,7 @@ Texture2D& tmpRamp = ResourceManager::getTexture2D("textures/Texture Ramp.png");
 			m_shader = ResourceManager::getShader("Shaders/PassThrough.vtsh", "Shaders/SpotLight.frag");
 			break;
 		}
-	m_shader->enable();
+		m_shader->enable();
 
 
 		m_shader->sendUniform("uPosOP", 0);
@@ -301,7 +340,7 @@ Texture2D& tmpRamp = ResourceManager::getTexture2D("textures/Texture Ramp.png");
 
 
 		FrameBuffer::drawFullScreenQuad();
-	m_shader->sendUniform("LightEnable", false);
+		m_shader->sendUniform("LightEnable", false);
 	}
 
 
@@ -323,6 +362,11 @@ void LightManager::clear()
 void LightManager::setFramebuffer(FrameBuffer* buff)
 {
 	m_framebuffer = buff;
+}
+
+void LightManager::enableShadows(bool enable)
+{
+	m_shadowEnable = enable;
 }
 
 void Light::setLightType(TYPE a_type)

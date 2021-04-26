@@ -69,7 +69,7 @@ public:
 	void takeFromBackBufferDepth(int windowWidth, int windowHeight);
 
 	GLuint getDepthHandle() const;
-	GLuint getColorHandle(unsigned m_index) const;
+	GLuint getColourHandle(unsigned m_index) const;
 
 	Texture2D& getColorTexture(unsigned m_index) const;
 

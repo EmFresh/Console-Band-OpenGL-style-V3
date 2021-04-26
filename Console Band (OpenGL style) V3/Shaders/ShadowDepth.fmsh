@@ -1,6 +1,8 @@
 #version 420
 
+out vec3 outColor;
+
 void main()
 {
-    
+outColor = vec3(gl_FragCoord.z);      
 }

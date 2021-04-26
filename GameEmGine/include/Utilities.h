@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 #define reclass(a_class,a_val) (*(a_class*)&(a_val))
 typedef const char* cstring;
@@ -70,11 +71,11 @@ static inline T lerp(const T& v0, const T& v1, const float& t)
 	return (T)((1.0f - t) * v0 + (t)*v1);
 }
 
+template<typename T>
+static inline T clamp(T mini, T maxi, T val) { return std::min(mini, std::max(maxi, val)); }
+
 //?
-static inline int vectorWrap(int num, int mod)
-{
-	return (num + mod) % mod;
-}
+static inline int vectorWrap(int num, int mod) { return (num + mod) % mod; }
 
 //template<class Enum, class Base>
 //class _EnumCreator
@@ -160,7 +161,7 @@ public:
 			//	if(is_pointer::value)
 			//		objects[count] = new type());
 			//	else
-			*objects[count]  =  T();
+			*objects[count] = T();
 		}
 
 		return *objects[current = count++];
@@ -203,7 +204,7 @@ struct Coord2D
 		return glm::vec2(x, y);
 	}
 
-	T distance()
+	T length()
 	{
 		return sqrtf(x * x + y * y);
 	}
@@ -213,9 +214,14 @@ struct Coord2D
 		return sqrtf(v3.x * v3.x + v3.y * v3.y);
 	}
 
+	T distanceSquare()
+	{
+		return (x * x + y * y);
+	}
+
 	Coord2D normal()
 	{
-		return *this / distance();
+		return *this / length();
 	}
 
 	T& operator[](int m_index)
@@ -265,6 +271,40 @@ struct Coord2D
 	{
 		x /= coord, y /= coord;
 	}
+
+
+	bool operator==(Coord2D<T> coord)const
+	{
+		return
+			x == coord.x &&
+			y == coord.y;
+	}
+
+	bool operator!=(Coord2D<T> coord)const
+	{
+		return !(*this == coord);
+	}
+
+	//based on distance
+	bool operator>(Coord2D<T> coord)
+	{
+		return this->distanceSquare() > coord.distanceSquare();
+	}
+	//based on distance
+	bool operator<=(Coord2D<T> coord)const
+	{
+		return !(*this > coord);
+	}
+	//based on distance
+	bool operator<(Coord2D<T> coord)
+	{
+		return distanceSquare() < coord.distanceSquare();
+	}
+	//based on distance
+	bool operator>=(Coord2D<T> coord)const
+	{
+		return !(*this < coord);
+	}
 };
 
 template<class T = float>
@@ -285,6 +325,13 @@ struct Coord3D
 		x = coord.x;
 		y = coord.y;
 		z = 0;
+	}
+	template<class P = float>
+	Coord3D(const Coord2D<P> coord)
+	{
+		x = (T)coord.x;
+		y = (T)coord.y;
+		z = (T)0;
 	}
 	Coord3D(glm::vec4 coord)
 	{
@@ -345,10 +392,10 @@ struct Coord3D
 	static T distance(Coord3D<T> v1, Coord3D<T> v2)
 	{
 		v1 -= v2;
-		return v1.distance();
+		return v1.length();
 	}
 
-	T distance()
+	T length()
 	{
 		return (T)sqrtf(x * x + y * y + z * z);
 	}
@@ -390,7 +437,7 @@ struct Coord3D
 
 	Coord3D<T> normal()
 	{
-		return *this / distance();
+		return *this / length();
 	}
 
 
@@ -474,6 +521,23 @@ struct Coord3D
 	Coord3D<T> operator/(T coord)const
 	{
 		return {x / coord,y / coord,z / coord};
+	}
+	Coord3D<T> operator%(Coord3D<T> coord)const
+	{
+		return	{
+			(T)coord.x ? std::fmodf(x , coord.x) : 0,
+			(T)coord.y ? std::fmodf(y , coord.y) : 0,
+			(T)coord.z ? std::fmodf(z , coord.z) : 0
+		};
+	}
+
+	Coord3D<T> operator%(T coord)const
+	{
+		return {
+			(T)coord ? std::fmodf(x , coord) : 0,
+			(T)coord ? std::fmodf(y , coord) : 0,
+			(T)coord ? std::fmodf(z , coord) : 0
+		};
 	}
 
 	Coord3D<T> operator-()const
@@ -781,8 +845,8 @@ struct Vertex2D
 struct Vertex3D
 {
 	Coord3D<float> coord, norm;
-	ColourRGBA	colour;
 	UV uv;
+	ColourRGBA	colour;
 
 	void setCoord(float x, float y, float z)
 	{

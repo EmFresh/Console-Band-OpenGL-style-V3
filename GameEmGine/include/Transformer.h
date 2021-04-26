@@ -38,9 +38,9 @@ public:
 
 	virtual void scaleBy(float scale);
 	virtual void scaleBy(float x, float y, float z);
-	virtual void setScale(Vec3 scale);
-	virtual void setScale(float scale);
-	virtual void setScale(float x, float y, float z);
+	virtual void scale(Vec3 scale);
+	virtual void scale(float scale);
+	virtual void scale(float x, float y, float z);
 
 	/*GETTERS*/
 	virtual Vec3 getLocalPosition();

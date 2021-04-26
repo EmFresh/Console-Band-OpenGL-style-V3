@@ -94,7 +94,7 @@ void main() {
 
   // Ambient Light
   float ambientStrength = 1.0;
-  outColor = vec4(colour * LightAmbient * ambientStrength * int(AmbiantEnable), 1);
+  outColor = vec4( LightAmbient * ambientStrength * int(AmbiantEnable), 1);
  
   //do light calculations
   pointLight();

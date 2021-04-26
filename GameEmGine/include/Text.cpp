@@ -2,7 +2,7 @@
 #include <cmath>
 Text::Text():Transformer(), m_vaoID(0), m_vboID(0)
 {
-	setScale(1);
+	scale(1);
 
 	m_type = "TEXT";
 	m_font = "fonts/arial.ttf";
@@ -20,7 +20,7 @@ Text::Text():Transformer(), m_vaoID(0), m_vboID(0)
 
 Text::Text(cstring font):Transformer(), m_vaoID(0), m_vboID(0)
 {
-	setScale(1);
+	scale(1);
 
 	m_type = "TEXT";
 	m_font = font;
@@ -45,7 +45,7 @@ void Text::setText(std::string text)
 
 void Text::textSize(short s)
 {
-	setScale(s * 0.020834f);// s / 48 = s * 0.020834f 
+	scale(s * 0.020834f);// s / 48 = s * 0.020834f 
 	testSize();
 }
 
@@ -209,7 +209,7 @@ void Text::toTexture(unsigned int width)
 	}
 
 	if(width)
-		setScale(width / x);
+		scale(width / x);
 
 
 	x *= getScale().x;
@@ -236,11 +236,11 @@ void Text::toTexture(unsigned int width)
 	render(*ResourceManager::getShader("shaders/freetype.vtsh", "shaders/freetype.fmsh"), &cam, true);
 	setColour(a);
 	m_texture->disable();
-	setScale(tmpSize);
+	scale(tmpSize);
 	glViewport(view[0], view[1], view[2], view[3]);
 }
 
-GLuint Text::getTexture() { return m_texture->getColorHandle(0); }
+GLuint Text::getTexture() { return m_texture->getColourHandle(0); }
 
 bool Text::isTransparent()
 {

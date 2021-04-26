@@ -12,7 +12,7 @@ namespace util
 		Vec3 p1 = m1->getLocalPosition() * Vec3 { 1, 0, 1 }, p2 = m2->getLocalPosition() * Vec3 { 1, 0, 1 };
 
 
-		if((p1 - p2).distance() <= (r1 + r2))
+		if((p1 - p2).length() <= (r1 + r2))
 			return true;
 
 		return false;
@@ -21,7 +21,7 @@ namespace util
 	bool boxCollision(Model* m1, Model* m2, float r1, float r2)
 	{
 		Vec3 p1 = m1->getLocalPosition() * Vec3 { 1, 1, 0 }, p2 = m2->getLocalPosition() * Vec3 { 1, 1, 0 };
-		if((p1 - p2).distance() <= (r1 + r2) * .5f)
+		if((p1 - p2).length() <= (r1 + r2) * .5f)
 			return true;
 
 		return false;
@@ -34,7 +34,7 @@ namespace util
 		//App::GetMousePos(p1.x, p1.y);
 
 
-		if((p1 - p2).distance() <= r * .5)
+		if((p1 - p2).length() <= r * .5)
 			return true;
 
 		return false;
@@ -100,7 +100,7 @@ public:
 
 		if(dests.empty()) { m_active = false; return; }
 
-		if((dests[0]->getLocalPosition() - getLocalPosition()).distance() <= speed * dt)
+		if((dests[0]->getLocalPosition() - getLocalPosition()).length() <= speed * dt)
 		{
 			translate(dests[0]->getLocalPosition());
 			dests.erase(dests.begin());

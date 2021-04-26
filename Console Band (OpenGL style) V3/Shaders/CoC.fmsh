@@ -23,7 +23,7 @@ out vec4 outColor;
 
 void main()
 {
-    vec3 camPos = vec3(uCamPos.xy,-uCamPos.z);
+   // vec3 camPos = vec3(uCamPos.xy,-uCamPos.z);
 
     float z = texture(uFragDepth,texcoord).z;
     float objectDistance = -uFar * uNear / (z * (uFar - uNear) - uFar);
@@ -34,6 +34,6 @@ void main()
     vec3 colourA = texture(uScene,texcoord).rgb;
     vec3 colourB = texture(uBlurScene,texcoord).rgb;
 
-    outColor.rgb =  mix(colourA,colourB, CoC);
+    outColor.rgb =  mix(colourA, colourB, clamp(0,1,CoC));
     outColor.a = 1.0;
 }

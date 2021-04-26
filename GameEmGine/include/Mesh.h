@@ -187,7 +187,7 @@ struct PrimitivePlane:public PrimitiveMesh
 
 		//normal
 		Vec3 norm = Vec3::crossProduct(tmp[0].coord - tmp[1].coord, tmp[0].coord - tmp[2].coord).normal();
-	
+
 		tmp[0].norm = norm;
 		tmp[1].norm = norm;
 		tmp[2].norm = norm;
@@ -217,18 +217,18 @@ struct PrimitivePlane:public PrimitiveMesh
 		Vec3 val;
 
 		val = ((tmp[0].coord - getLocalPosition()) + Vec3{halfW, halfH, halfD});
-		tmp[0].uv = {float((val * x).distance() > 0),float((val * y).distance() > 0)};//bottom left 
+		tmp[0].uv = {float((val * x).length() > 0),float((val * y).length() > 0)};//bottom left 
 		val = ((tmp[1].coord - getLocalPosition()) + Vec3{halfW, halfH, halfD});
-		tmp[1].uv = {float((val * x).distance() > 0),float((val * y).distance() > 0)};//bottom right*
+		tmp[1].uv = {float((val * x).length() > 0),float((val * y).length() > 0)};//bottom right*
 		val = ((tmp[2].coord - getLocalPosition()) + Vec3{halfW, halfH, halfD});
-		tmp[2].uv = {float((val * x).distance() > 0),float((val * y).distance() > 0)};//top left*
+		tmp[2].uv = {float((val * x).length() > 0),float((val * y).length() > 0)};//top left*
 
 		val = ((tmp[3].coord - getLocalPosition()) + Vec3{halfW, halfH, halfD});
-		tmp[3].uv = {float((val * x).distance() > 0),float((val * y).distance() > 0)};//top right
+		tmp[3].uv = {float((val * x).length() > 0),float((val * y).length() > 0)};//top right
 		val = ((tmp[4].coord - getLocalPosition()) + Vec3{halfW, halfH, halfD});
-		tmp[4].uv = {float((val * x).distance() > 0),float((val * y).distance() > 0)};//top left*
+		tmp[4].uv = {float((val * x).length() > 0),float((val * y).length() > 0)};//top left*
 		val = ((tmp[5].coord - getLocalPosition()) + Vec3{halfW, halfH, halfD});
-		tmp[5].uv = {float((val * x).distance() > 0),float((val * y).distance() > 0)};//bottom right*
+		tmp[5].uv = {float((val * x).length() > 0),float((val * y).length() > 0)};//bottom right*
 
 
 		indiceCreator(tmp);
@@ -360,10 +360,12 @@ public:
 				{
 					//bottom Coord
 					tmp.push_back({{0,-m_dim.h * .5f * cos(0.f),0}});
-					//tmp.back().norm = {0,1,0};
+					tmp.back().uv = {.5f,0};
 
 					tmp.push_back({Quat(Vec3 {0, -(m_dim.h * .5f) * (sin(1.f)), (m_dim.w * .5f) * (cos(1.f))}).rotation(360.f / m_segments * (a + 1),0,1,0).getCoord()});
+					tmp.back().uv = {float(a + 1) / m_segments,sin(1.f)};
 					tmp.push_back({Quat(Vec3 {0, -(m_dim.h * .5f) * (sin(1.f)), (m_dim.w * .5f) * (cos(1.f))}).rotation(360.f / m_segments * a,0,1,0).getCoord()});
+					tmp.back().uv = {float(a) / m_segments,sin(1.f)};
 
 
 					norm = Vec3::crossProduct(tmp[tmp.size() - 1].coord - tmp[tmp.size() - 3].coord, tmp[tmp.size() - 1].coord - tmp[tmp.size() - 2].coord).normal();
@@ -371,27 +373,38 @@ public:
 						tmp[tmp.size() - 2].norm =
 						tmp[tmp.size() - 3].norm = norm;
 
+
+
 				}
 				else
 				{
 					//bottom left
 					tmp.push_back({reclass(Vec3,tmp2 = Quat(Vec3 {0, -(m_dim.h * .5f) * (sin((b - 1) / (float)m_divisions)),(m_dim.w * .5f) * (cos((b - 1) / (float)m_divisions))}).rotation(360.f / m_segments * a,0,1,0))});
+					tmp.back().uv = {a / (float)m_segments,(b - 1) / (float)m_divisions};
+
 					//top left
 					tmp.push_back({reclass(Vec3,tmp2 = Quat(Vec3 {0, -(m_dim.h * .5f) * (sin(b / (float)m_divisions)), (m_dim.w * .5f) * (cos(b / (float)m_divisions))}).rotation(360.f / m_segments * a,0,1,0))});
+					tmp.back().uv = {a / (float)m_segments,b / (float)m_divisions};
+
 					//top right
 					tmp.push_back({reclass(Vec3,tmp2 = Quat(Vec3 {0, -(m_dim.h * .5f) * (sin(b / (float)m_divisions)), (m_dim.w * .5f) * (cos(b / (float)m_divisions))}).rotation(360.f / m_segments * (a + 1),0,1,0))});
+					tmp.back().uv = {(a + 1) / (float)m_segments,b / (float)m_divisions};
 
 					norm = Vec3::crossProduct(tmp[tmp.size() - 2].coord - tmp[tmp.size() - 1].coord, tmp[tmp.size() - 2].coord - tmp[tmp.size() - 3].coord).normal();
 					tmp[tmp.size() - 1].norm =
 						tmp[tmp.size() - 2].norm =
 						tmp[tmp.size() - 3].norm = norm;
 
+
 					//bottom left
 					tmp.push_back({reclass(Vec3,tmp2 = Quat(Vec3 {0,-(m_dim.h * .5f) * (sin((b - 1) / (float)m_divisions)), (m_dim.w * .5f) * (cos((b - 1) / (float)m_divisions))}).rotation(360.f / m_segments * a,0,1,0))});
+					tmp.back().uv = {a / (float)m_segments,(b - 1) / (float)m_divisions};
 					//top right
 					tmp.push_back({reclass(Vec3,tmp2 = Quat(Vec3 {0,-(m_dim.h * .5f) * (sin(b / (float)m_divisions)),(m_dim.w * .5f) * (cos(b / (float)m_divisions))}).rotation(360.f / m_segments * (a + 1),0,1,0))});
+					tmp.back().uv = {(a + 1) / (float)m_segments,b / (float)m_divisions};
 					//bottom right
 					tmp.push_back({reclass(Vec3,tmp2 = Quat(Vec3 {0,-(m_dim.h * .5f) * (sin((b - 1) / (float)m_divisions)), (m_dim.w * .5f) * (cos((b - 1) / (float)m_divisions))}).rotation(360.f / m_segments * (a + 1),0,1,0))});
+					tmp.back().uv = {(a + 1) / (float)m_segments,(b - 1) / (float)m_divisions};
 
 					norm = Vec3::crossProduct(tmp[tmp.size() - 1].coord - tmp[tmp.size() - 3].coord, tmp[tmp.size() - 1].coord - tmp[tmp.size() - 2].coord).normal();
 					tmp[tmp.size() - 1].norm =
@@ -408,7 +421,12 @@ public:
 		{
 			a[0].coord.y *= -1;
 			a[0].norm.y *= -1;
+			a[0].uv.v = 1 - a[0].uv.v;
 		}
+
+		for(auto& a : tmp)
+			a.coord += getLocalPosition();
+
 		indiceCreator(tmp);
 
 		calculateBounds();

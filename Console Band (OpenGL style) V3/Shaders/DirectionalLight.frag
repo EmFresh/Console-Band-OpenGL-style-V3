@@ -82,8 +82,8 @@ void main() {
   vec3 colour = vec3(0);
 
   // Ambient Light
-  float ambientStrength = 1.0;
-  outColor = vec4(colour * LightAmbient * ambientStrength * int(AmbiantEnable), 1);
+  float ambientStrength = 0.5;
+  outColor = vec4( LightAmbient * ambientStrength * int(AmbiantEnable), 1);
  
   
   //do light calculations

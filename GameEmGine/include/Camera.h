@@ -42,7 +42,7 @@ public:
 
 	/*SET SCALE*/
 
-	void setScale(float scale);
+	void scale(float scale);
 
 	/*SET ROTATION*/
 
@@ -119,8 +119,8 @@ private:
 
 	void scaleBy(float scale) { scale; }
 	void scaleBy(float x, float y, float z) { x, y, z; }
-	void setScale(Vec3 scale) { scale; }
-	void setScale(float x, float y, float z) { x, y, z; }
+	void scale(Vec3 scale) { scale; }
+	void scale(float x, float y, float z) { x, y, z; }
 
 	bool isScaleUpdated() { return false; }
 	bool isRotationUpdated() { return false; }
@@ -137,11 +137,11 @@ struct ProjectionPeramiters
 	float zNear, zFar;
 	ProjectionPeramiters(Camera::CAM_TYPE a_type = Camera::CAM_TYPE::NONE):type(a_type) {}
 	ProjectionPeramiters(float znear, float zfar, Camera::CAM_TYPE a_type = Camera::CAM_TYPE::NONE):zNear(znear), zFar(zfar), type(a_type) {}
-	~ProjectionPeramiters()=default;
+	virtual ~ProjectionPeramiters()=default;
 
-	void setNear(float znear) { zNear = znear; }
-	void setFar(float zfar) { zFar = zfar; }
-	void setZExtents(float znear, float zfar) { zNear = znear; zFar = zfar; }
+	virtual void setNear(float znear) { zNear = znear; }
+	virtual void setFar(float zfar) { zFar = zfar; }
+	virtual void setZExtents(float znear, float zfar) { zNear = znear; zFar = zfar; }
 
 
 };
@@ -160,6 +160,8 @@ struct OrthoPeramiters:public ProjectionPeramiters
 
 	void setXAxis(float a_left, float a_right) { left = a_left; right = a_right; }
 	void setYAxis(float a_top, float a_bottom) { top = a_top; bottom = a_bottom; }
+
+	Vec2 getBounds() { return {abs(right-left),abs(top-bottom)}; }
 	float  left = 0, right = 0, bottom = 0, top = 0;
 };
 

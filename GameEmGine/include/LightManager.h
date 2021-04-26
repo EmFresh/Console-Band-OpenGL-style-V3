@@ -90,6 +90,8 @@ public:
 
 	static void setFramebuffer(FrameBuffer* buff);
 
+
+	static void enableShadows(bool);
 	/// <summary>
 	/// Renders shadows to specified buffer. Resets the viewport to window size once complete
 	/// </summary>

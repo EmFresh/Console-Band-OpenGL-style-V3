@@ -168,7 +168,7 @@ void GameEmGine::run()
 
 		InputManager::update();
 		update();
-
+		
 		if(true)//fps calculation
 		{
 			calculateFPS();
@@ -440,10 +440,11 @@ void GameEmGine::addCamera(Camera* cam)
 	//m_cameras[_numCameras - 1] = cam;
 }
 
-void GameEmGine::enableBloom(bool bloom)
+std::unordered_map<void*, Model*>& GameEmGine::getObjectList()
 {
-	m_bloom = bloom;
+	return m_models;
 }
+
 
 void GameEmGine::customRenderCallback(std::function<void(FrameBuffer*, FrameBuffer*, float dt)>render)
 {
@@ -548,7 +549,7 @@ void GameEmGine::update()
 	m_postBuffer->disable();
 		
 	//Apply shadows
-	LightManager::shadowRender(1024, 1024, m_postBuffer, m_gBuff, m_models);
+	LightManager::shadowRender(500, 500, m_postBuffer, m_gBuff, m_models);
 
 	//post effects
 	if(m_customRender)

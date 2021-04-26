@@ -14,7 +14,8 @@ Camera::Camera(ProjectionPeramiters* peram, Vec3 size)
 
 Camera::~Camera()
 {
-	delete m_projData;
+	if(m_projData)
+		delete m_projData;
 }
 
 void Camera::init(Vec3 size, CAM_TYPE type, ProjectionPeramiters* peram)
@@ -33,8 +34,8 @@ void Camera::setType(CAM_TYPE type, ProjectionPeramiters* peram)
 		if(m_projData)
 			delete m_projData;
 		m_projData = new ProjectionPeramiters(*peram);
-		memset(m_projData, 0, sizeof(ProjectionPeramiters));
 	}
+
 	OrthoPeramiters* peram1 = reclass(OrthoPeramiters*, peram);
 	FrustumPeramiters* peram2 = reclass(FrustumPeramiters*, peram);
 	switch(m_type = type)
@@ -63,6 +64,13 @@ void Camera::setType(CAM_TYPE type, ProjectionPeramiters* peram)
 
 void Camera::setType(ProjectionPeramiters* peram)
 {
+	if(peram)
+	{
+		if(m_projData)
+			delete m_projData;
+		m_projData = new ProjectionPeramiters(*peram);
+	}
+
 	OrthoPeramiters* peram1 = reclass(OrthoPeramiters*, peram);
 	FrustumPeramiters* peram2 = reclass(FrustumPeramiters*, peram);
 	switch(peram->type)
@@ -118,7 +126,7 @@ bool Camera::update()
 			Transformer::rotateBy(m_rotateBy);
 
 
-		Transformer::setScale(m_scale);
+		Transformer::scale(m_scale);
 		m_viewMat = m_worldTranslate * m_worldRotate * glm::inverse(m_localTranslate * m_localRotate);
 
 		m_cameraMat = m_projMat * m_viewMat;
@@ -162,7 +170,7 @@ void  Camera::translateBy(Vec3 position)
 	m_isTranslateBy = m_cameraUpdate = true;
 }
 
-void Camera::setScale(const float scale)
+void Camera::scale(const float scale)
 {
 	m_scale = scale;
 	m_cameraUpdate = true;
@@ -302,7 +310,7 @@ void Camera::render(Shader* shader, const std::unordered_map<void*, Model*>& mod
 			if(shadow)
 				if(!a.second->isCastingShadow())continue;
 			if(shader)
-				if(!cull(a.second))
+				if(/*!cull(a.second)*/true)
 					if(trans == a.second->isTransparent())
 						a.second->render(*shader, this);
 		}

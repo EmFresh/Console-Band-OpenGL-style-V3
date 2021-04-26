@@ -4,12 +4,58 @@
 
 #include <GameEmGine.h>
 #include <memory>
+#include <cmath>
 #include "GameObjects.h"
 #include "Song.h"
 #include "Menu.h"
 #include "BeatMapReader.h"
 
+using std::vector;
+using std::shared_ptr;
+
 static std::string lutPath = "textures/hot.cube";
+
+class ObjectSpawner
+{
+	vector<shared_ptr<Model>> m_objects;
+	Model* m_obj;
+	uint m_amount;
+	Vec3 m_spawnRange;
+	float m_minScale, m_maxScale;
+public:
+	ObjectSpawner() = default;
+	ObjectSpawner(Model* obj, uint amount, Vec3 spawnRange, float minScale = 1, float maxScale = 1):
+		m_obj(obj), m_amount(amount), m_spawnRange(spawnRange),
+		m_minScale(minScale), m_maxScale(maxScale)
+	{}
+
+	void spawn()
+	{
+		//	m_objects.clear();
+		for(int a = 0; a < m_amount; ++a)
+		{
+
+			Vec3 location =
+				(Vec3(std::rand(), std::rand(), std::rand()) % m_spawnRange +
+				 Vec3(std::rand() % 1000 * .001f, std::rand() % 1000 * .001f, std::rand() % 1000 * .001f)) *
+				Vec3(std::rand() % 2 ? -1 : 1, std::rand() % 2 ? -1 : 1, std::rand() % 2 ? -1 : 1) *
+				Vec3(bool(m_spawnRange.x), bool(m_spawnRange.y), bool(m_spawnRange.z));
+
+			float scale =
+				std::min(m_maxScale,
+						 (m_minScale + std::rand() % int(m_maxScale - m_minScale)) +
+						 (std::rand() % 1000 * .001f)
+				);
+
+			auto tmp = shared_ptr<Model>(new Model(*m_obj, "spawned obj"));
+
+			tmp->scale(scale);
+			tmp->translate(location);
+			m_objects.push_back(tmp);
+			Game::addModel(tmp.get());
+		}
+	}
+};
 
 class Test: public Scene
 {
@@ -23,8 +69,6 @@ class Test: public Scene
 
 	};
 
-
-
 #pragma region Variables
 
 	float speed = 20, angle = 1, bloomThresh = 0.1f;
@@ -36,6 +80,8 @@ class Test: public Scene
 	Transformer trans[10];
 	Model bigBoss[2];
 	Model rocket;
+
+	float focusPlane = 10, focalLength = 5, aperture = 1;
 
 	Text testText;
 	Light lit;
@@ -59,6 +105,7 @@ public:
 		Game::getMainCamera()->reset();
 		Game::translateCamera({0,5,-15});
 		Game::getMainCamera()->enableFPSMode();
+		focusPlane = 10, focalLength = 5, aperture = 1;
 	}
 
 	void init()
@@ -137,23 +184,13 @@ public:
 			m_buffer2->clear();
 
 			static float timer = 0;
-			Shader* filmGrain = ResourceManager::getShader("Shaders/Passthrough.vtsh", "shaders/filmgrain.fmsh");
-			Shader* pixel = ResourceManager::getShader("Shaders/Passthrough.vtsh", "shaders/pixelation.fmsh");
 			Shader* CoC = ResourceManager::getShader("Shaders/Passthrough.vtsh", "shaders/CoC.fmsh");
 			postBuff->setViewport(0, 0, 0);
+
 			switch(toggle)
 			{
 			case Switches::DefaultScene:
 				break;
-				//	case Switches::AmbiantLight:
-				//		gbuff->copySingleColourToBuffer(postBuff->getColourWidth(0), postBuff->getColourHeight(0), postBuff, 0);
-				//		break;
-				//	case Switches::SpecularLight:
-				//		gbuff->copySingleColourToBuffer(postBuff->getColourWidth(0), postBuff->getColourHeight(0), postBuff, 2);
-				//		break;
-				//	case Switches::AmbiSpecLight:
-				//		gbuff->copySingleColourToBuffer(postBuff->getColourWidth(0), postBuff->getColourHeight(0), postBuff, 4);
-				//		break;
 			case Switches::DoF:
 
 			#pragma region Scene Blur  
@@ -166,7 +203,7 @@ public:
 					m_buffer1->enable();
 					m_blurHorizontal->enable();
 					m_blurHorizontal->sendUniform("uTex", 0);
-					m_blurHorizontal->sendUniform("uPixleSize", 1.0f / Game::getWindowHeight());
+					m_blurHorizontal->sendUniform("uPixleSize", 1.0f / m_buffer1->getColourWidth(0));
 					m_buffer1->getColorTexture(0).bindTexture(0);
 					FrameBuffer::drawFullScreenQuad();
 
@@ -177,7 +214,7 @@ public:
 					m_buffer1->enable();
 					m_blurVertical->enable();
 					m_blurVertical->sendUniform("uTex", 0);
-					m_blurVertical->sendUniform("uPixleSize", 1.0f / Game::getWindowWidth());
+					m_blurVertical->sendUniform("uPixleSize", 1.0f / m_buffer1->getColourHeight(0));
 					m_buffer1->getColorTexture(0).bindTexture(0);
 					FrameBuffer::drawFullScreenQuad();
 
@@ -187,10 +224,12 @@ public:
 
 				FrameBuffer::disable();//return to base frame buffer 
 			#pragma endregion 
+
 			#pragma region Bokah
 				//haha psych  
 			#pragma endregion
 
+			#pragma region DoF
 				postBuff->setViewport(0, 0, 0);
 				postBuff->enable();
 				CoC->enable();
@@ -201,15 +240,15 @@ public:
 				CoC->sendUniform("uBlurScene", 3);
 
 				gbuff->getColorTexture(0).bindTexture(0);
-				Texture2D::bindTexture(1,gbuff->getDepthHandle());
+				Texture2D::bindTexture(1, gbuff->getDepthHandle());
 				postBuff->getColorTexture(0).bindTexture(2);
 				m_buffer1->getColorTexture(0).bindTexture(3);
 
 				CoC->sendUniform("uCamPos", Game::getMainCamera()->getLocalPosition());
 				CoC->sendUniform("uCamForw", Game::getMainCamera()->getForward());
-				//CoC->sendUniform("aperture", 1);
-				//	CoC->sendUniform("focalLength", 0);
-				//	CoC->sendUniform("planeInFocus", 0);
+				CoC->sendUniform("aperture", aperture);
+				CoC->sendUniform("focalLength", focalLength);
+				CoC->sendUniform("planeInFocus", focusPlane);
 
 				FrameBuffer::drawFullScreenQuad();
 
@@ -220,8 +259,59 @@ public:
 
 				CoC->disable();
 				postBuff->disable();
+			#pragma endregion
+
+			#pragma region Text Display
+				static Text txtFocalLength, txtFocusPlane, txtAperture;
+				static OrthoPeramiters ortho{0,(float)Game::getWindowWidth(),(float)Game::getWindowHeight(),0,0,500};
+				static Camera cam(&ortho);
+
+				if(((OrthoPeramiters*)cam.getProjectionData())->getBounds() !=
+				   Vec2{(float)Game::getWindowWidth(), (float)Game::getWindowHeight()})
+				{
+					OrthoPeramiters orthonew{0,(float)Game::getWindowWidth(),(float)Game::getWindowHeight(),0,0,500};
+					cam.setType(&orthonew);
+				}
+
+				cam.update();
+
+				char str[50];
+				sprintf_s(str, "Aperture= %.2f", aperture);
+				txtAperture.setColour(1, 0, 0);
+				txtAperture.setText(str);
+				txtAperture.textSize(35);
+				txtAperture.rotate(180, 0, 0);
+				txtAperture.translate(0, Game::getWindowHeight() * .5f - txtAperture.getHeight() * 1.25f, 0);
+
+				sprintf_s(str, "Focus Plane= %.2f", focusPlane);
+				txtFocusPlane.setColour(1, 0, 0);
+				txtFocusPlane.setText(str);
+				txtFocusPlane.textSize(35);
+				txtFocusPlane.rotate(180, 0, 0);
+				txtFocusPlane.translate(0, Game::getWindowHeight() * .5f - txtFocusPlane.getHeight() * .5f, 0);
+
+				sprintf_s(str, "Focal Length= %.2f", focalLength);
+				txtFocalLength.setColour(1, 0, 0);
+				txtFocalLength.setText(str);
+				txtFocalLength.textSize(35);
+				txtFocalLength.rotate(180, 0, 0);
+				txtFocalLength.translate(0, Game::getWindowHeight() * .5f + txtFocalLength.getHeight() * .5f, 0);
+
+				static std::unordered_map<void*, Model*> tmp;
+				tmp[&txtFocalLength] = (Model*)&txtFocalLength;
+				tmp[&txtFocusPlane] = (Model*)&txtFocusPlane;
+				tmp[&txtAperture] = (Model*)&txtAperture;
+
+				postBuff->enable();
+				glClearDepth(1.f);
+				glClear(GL_DEPTH_BUFFER_BIT);
+				cam.render(nullptr, tmp, true);
+				postBuff->disable();
+
+			#pragma endregion
 				break;
 			}
+
 		};
 
 
@@ -271,22 +361,32 @@ public:
 		models[2].setColour(0, .5f, 0, .75f);
 		models[2].translate(5, 10, 3);
 		models[2].rotate(40, 106, 33);
-
 		//models[2].setTransparent(true);
 		Game::addModel(&models[2]);
 
+
 		lit.setLightType(Light::TYPE::DIRECTIONAL);
 		//lit.setParent(Game::getMainCamera());
-		lit.setDiffuse({155,0,0});
+		lit.setAmbient({120,165,120});
+		lit.setSpecular({0,0,255});
 		LightManager::addLight(&lit);
+		LightManager::enableShadows(false);
+
+		Model sphere(new PrimitiveSphere({1,1}, 20, 20, {0,.5,0}));
+		//sphere.setColour(0, 1, 0);
+		sphere.replaceTexture(0, 0, ResourceManager::getTexture2D("Textures/moon.jpg").id);
+		static ObjectSpawner thestuff(&sphere, 20, {125,0,125}, 3, 5);
+
+		thestuff.spawn();
+
+		//Game::addModel(&sphere);
 
 		//static Light tester;
 		//tester.setLightType(Light::TYPE::DIRECTIONAL);
 		//tester.rotate({45,-90,0});
 		//LightManager::addLight(&tester);
+
 	#pragma endregion
-
-
 
 		//Key binds
 		keyPressed =
@@ -312,9 +412,52 @@ public:
 			if(key == GLFW_KEY_TAB)
 				tab = !tab;//	std::swap(model[0], model[count++]);
 
-			for(int a = 0; a < 8; ++a)
+			for(int a = 0; a < 5; ++a)
 				if(key == GLFW_KEY_1 + a)
 					toggle = (Switches)a;
+
+
+			if(key == GLFW_KEY_1)
+			{
+				lit.enableAmbiant(false);
+				lit.enableSpecular(false);
+				lit.enableDiffuse(false);
+			}
+			else if(key == GLFW_KEY_2)
+			{
+				lit.enableAmbiant(true);
+				lit.enableSpecular(false);
+				lit.enableDiffuse(false);
+			}
+			else if(key == GLFW_KEY_3)
+			{
+				lit.enableAmbiant(false);
+				lit.enableSpecular(true);
+				lit.enableDiffuse(false);
+			}
+			else if(key == GLFW_KEY_4)
+			{
+				lit.enableAmbiant(true);
+				lit.enableSpecular(true);
+				lit.enableDiffuse(false);
+			}
+			else if(key == GLFW_KEY_5)
+			{
+				lit.enableAmbiant(true);
+				lit.enableSpecular(true);
+				lit.enableDiffuse(false);
+			}
+			else if(key == GLFW_KEY_6)
+			{
+				static bool enable = true;
+				auto& list = Game::getObjectList();
+
+				for(auto& a : list)
+					if(a.second->getCompType() == "MODEL")
+						a.second->enableTexture(!enable);
+				enable = !enable;
+			}
+
 
 			static bool fps = 0;
 			if(key == 'F')
@@ -471,12 +614,29 @@ public:
 
 	}
 
+	void DoFMovement(float dt)
+	{
+		if(moveForward)
+			focusPlane += speed * dt * .5;
+		if(moveBack)
+			focusPlane += -speed * dt * .5;
+		if(moveRight)
+			focalLength += speed * dt * .5;
+		if(moveLeft)
+			focalLength += -speed * dt * .5;
+		if(moveUp)
+			aperture += speed * dt * .5;
+		if(moveDown)
+			aperture += -speed * dt * .5;
+
+	}
+
 	void update(double dt)
 	{
 		if(!tab)
 			cameraMovement((float)dt);
 		else
-			lightMovement((float)dt);
+			DoFMovement((float)dt);
 
 		float maxSpeed = 10;
 
